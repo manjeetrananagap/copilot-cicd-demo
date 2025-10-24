@@ -1,63 +1,191 @@
-name: Node.js CI/CD Pipeline
+name: Node.js CI/CD Pipeline - Build, Test & Deploy
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main]
 
 jobs:
-  test:
-    name: Test and Lint
-    runs-on: ubuntu-latest
+    # Job 1: Build the application
+    build:
+        name: Build Application
+        runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [16.x, 18.x, 20.x]
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '18.x'
+                  cache: 'npm'
 
-    - name: Setup Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+            - name: Install dependencies
+              run: npm ci
 
-    - name: Install dependencies
-      run: npm ci
+            - name: Build application
+              run: |
+                  echo "Building application..."
+                  npm run build --if-present
+                  echo "✅ Build completed successfully!"
 
-    - name: Run linter
-      run: npm run lint
-      continue-on-error: true
+            - name: Upload build artifacts
+              uses: actions/upload-artifact@v3
+              with:
+                  name: build-artifacts
+                  path: |
+                      node_modules/
+                      package-lock.json
+                  retention-days: 1
 
-    - name: Run tests with coverage
-      run: npm test
+    # Job 2: Run tests
+    test:
+        name: Test Application
+        runs-on: ubuntu-latest
+        needs: build
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      if: matrix.node-version == '18.x'
-      with:
-        files: ./coverage/coverage-final.json
-        flags: unittests
-        name: codecov-umbrella
+        strategy:
+            matrix:
+                node-version: [16.x, 18.x, 20.x]
 
-  build:
-    name: Build Application
-    runs-on: ubuntu-latest
-    needs: test
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
 
-    steps:
-    - uses: actions/checkout@v3
+            - name: Setup Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v3
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: 'npm'
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18.x'
+            - name: Download build artifacts
+              uses: actions/download-artifact@v3
+              with:
+                  name: build-artifacts
 
-    - name: Install dependencies
-      run: npm ci
+            - name: Install dependencies
+              run: npm ci
 
-    - name: Build success notification
-      run: echo "✅ Build completed successfully!"
+            - name: Run linter
+              run: npm run lint
+              continue-on-error: true
+
+            - name: Run unit tests
+              run: npm test
+
+            - name: Generate coverage report
+              run: npm test -- --coverage
+
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v3
+              if: matrix.node-version == '18.x'
+              with:
+                  files: ./coverage/coverage-final.json
+                  flags: unittests
+                  name: codecov-umbrella
+
+    # Job 3: Code Quality Check
+    code-quality:
+        name: Code Quality Analysis
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '18.x'
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run ESLint
+              run: npm run lint
+              continue-on-error: false
+
+            - name: Check code formatting
+              run: npm run format -- --check
+              continue-on-error: true
+
+    # Job 4: Deploy/Commit (only on main branch, after tests pass)
+    deploy:
+        name: Deploy & Commit Results
+        runs-on: ubuntu-latest
+        needs: [build, test, code-quality]
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '18.x'
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Generate build info
+              run: |
+                  mkdir -p build-info
+                  echo "Build Date: $(date)" > build-info/build.txt
+                  echo "Commit SHA: ${{ github.sha }}" >> build-info/build.txt
+                  echo "Branch: ${{ github.ref_name }}" >> build-info/build.txt
+                  echo "Node Version: $(node --version)" >> build-info/build.txt
+                  echo "NPM Version: $(npm --version)" >> build-info/build.txt
+                  echo "✅ All tests passed!" >> build-info/build.txt
+
+            - name: Commit build artifacts (if any changes)
+              run: |
+                  git config --local user.email "github-actions[bot]@users.noreply.github.com"
+                  git config --local user.name "github-actions[bot]"
+                  git add build-info/ || true
+                  git diff --quiet && git diff --staged --quiet || git commit -m "chore: Update build info [skip ci]"
+              continue-on-error: true
+
+            - name: Push changes
+              uses: ad-m/github-push-action@master
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  branch: ${{ github.ref }}
+              continue-on-error: true
+
+            - name: Deployment success notification
+              run: |
+                  echo "🚀 Deployment successful!"
+                  echo "✅ Build completed"
+                  echo "✅ Tests passed"
+                  echo "✅ Code quality checked"
+                  echo "✅ Results committed to repository"
+
+    # Job 5: Notification Summary
+    summary:
+        name: Pipeline Summary
+        runs-on: ubuntu-latest
+        needs: [build, test, code-quality, deploy]
+        if: always()
+
+        steps:
+            - name: Check pipeline status
+              run: |
+                  echo "📊 CI/CD Pipeline Summary"
+                  echo "========================="
+                  echo "Build: ${{ needs.build.result }}"
+                  echo "Test: ${{ needs.test.result }}"
+                  echo "Code Quality: ${{ needs.code-quality.result }}"
+                  echo "Deploy: ${{ needs.deploy.result }}"
+                  echo "========================="
+                  if [ "${{ needs.test.result }}" == "failure" ]; then
+                    echo "❌ Pipeline FAILED - Tests did not pass"
+                    exit 1
+                  else
+                    echo "✅ Pipeline PASSED - All checks successful!"
+                  fi

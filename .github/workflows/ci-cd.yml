@@ -7,7 +7,7 @@ on:
         branches: [main]
 
 jobs:
-    # Job 1: Build the application
+    # Job 1: Build the application changes
     build:
         name: Build Application
         runs-on: ubuntu-latest

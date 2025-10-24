@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # GitHub Copilot CI/CD Demo - VS Code Edition
 
 A comprehensive Node.js demonstration project optimized for **Visual Studio Code** with GitHub Copilot integration.
@@ -135,3 +136,6 @@ copilot-cicd-demo/
 ---
 
 **Ready to demonstrate AI-powered DevOps!** 🚀
+=======
+# copilot-cicd-demo
+>>>>>>> bbc7483bf0598a072241270ce0fc566d8c7efd0d

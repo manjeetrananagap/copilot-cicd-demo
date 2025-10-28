@@ -14,10 +14,10 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: Setup Node.js
-              uses: actions/setup-node@v3
+              uses: actions/setup-node@v4
               with:
                   node-version: '18.x'
                   cache: 'npm'
@@ -32,7 +32,7 @@ jobs:
                   echo "✅ Build completed successfully!"
 
             - name: Upload build artifacts
-              uses: actions/upload-artifact@v3
+              uses: actions/upload-artifact@v4
               with:
                   name: build-artifacts
                   path: |
@@ -52,16 +52,16 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
 
             - name: Setup Node.js ${{ matrix.node-version }}
-              uses: actions/setup-node@v3
+              uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
                   cache: 'npm'
 
             - name: Download build artifacts
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
               with:
                   name: build-artifacts
 
@@ -127,12 +127,12 @@ jobs:
 
         steps:
             - name: Checkout code
-              uses: actions/checkout@v3
+              uses: actions/checkout@v4
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: Setup Node.js
-              uses: actions/setup-node@v3
+              uses: actions/setup-node@v4
               with:
                   node-version: '18.x'
 
@@ -172,7 +172,7 @@ jobs:
                   echo "✅ Code quality checked"
                   echo "✅ Results committed to repository"
 
-    # Job 5: Notification Summary Chnages
+    # Job 5: Notification Summary
     summary:
         name: Pipeline Summary
         runs-on: ubuntu-latest

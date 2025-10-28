@@ -1,49 +1,59 @@
 /**
  * Calculate user's age based on birth date
- * Bug: Formula is reversed!
+ * Fixed: Correct formula
  */
 function getUserAge(user) {
     if (!user || !user.birthDate) {
         return null;
     }
-    // Bug: This returns a negative age!
-    return user.birthDate.getFullYear() - new Date().getFullYear();
+    // Fixed: Correct calculation
+    return new Date().getFullYear() - user.birthDate.getFullYear();
 }
 
 /**
  * Validate user object
- * Bug: Missing validation for birthDate type
+ * Fixed: Complete validation including Date type check
  */
 function validateUser(user) {
     if (!user) {
         return false;
     }
-    // Bug: Should also check if birthDate is a valid Date object
-    return user.hasOwnProperty('birthDate');
+    // Fixed: Check if birthDate exists and is a valid Date
+    return user.hasOwnProperty('birthDate') && user.birthDate instanceof Date;
 }
 
 /**
  * Calculate years until retirement (assuming retirement age is 65)
- * Bug: Wrong calculation order
+ * Fixed: Correct calculation
  */
 function calculateYearsUntilRetirement(user) {
     const age = getUserAge(user);
-    // Bug: Should be 65 - age, not age - 65
-    return age - 65;
+    if (age === null) {
+        return null;
+    }
+    // Fixed: Correct order
+    return 65 - age;
 }
 
 /**
  * Format user info
- * Bug: Missing null checks
+ * Fixed: Added null checks
  */
 function formatUserInfo(user) {
-    // Bug: Will crash if user.name is undefined
-    return `${user.name} is ${getUserAge(user)} years old`;
+    if (!user || !user.name) {
+        return 'Unknown user';
+    }
+    const age = getUserAge(user);
+    // Fixed: Handle null age
+    if (age === null) {
+        return `${user.name} has invalid birth date`;
+    }
+    return `${user.name} is ${age} years old`;
 }
 
 module.exports = {
     getUserAge,
     validateUser,
     calculateYearsUntilRetirement,
-    formatUserInfo
+    formatUserInfo,
 };

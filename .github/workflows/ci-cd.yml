@@ -172,7 +172,7 @@ jobs:
                   echo "✅ Code quality checked"
                   echo "✅ Results committed to repository"
 
-    # Job 5: Notification Summary
+    # Job 5: Notification Summary Chnages
     summary:
         name: Pipeline Summary
         runs-on: ubuntu-latest
